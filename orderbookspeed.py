@@ -6,7 +6,8 @@ from colorama import Fore, Style
 from decimal import Decimal, ROUND_DOWN
 
 changeCount = 0
-measurementInterval = 3 
+measurementInterval = 3
+ticker = 'BTC-USD' 
 
 logFile = open('order_book_stats.json', 'a')
 
@@ -17,14 +18,17 @@ class DecimalEncoder(json.JSONEncoder):
         return super().default(o)
 
 def on_open(ws):
-    print('WebSocket connection opened')
+    with open('logo.txt', 'r') as logo_file:
+        logo = logo_file.read()
+        print(logo)
+    print('WebSocket Connection Opened. . . .')
 
     subscriptionData = {
         'type': 'subscribe',
-        'product_ids': ['BTC-USD'],
+        'product_ids': ['ticker'],
         'channels': [
-            {'name': 'level2', 'product_ids': ['BTC-USD']},
-            {'name': 'ticker', 'product_ids': ['BTC-USD']}
+            {'name': 'level2', 'product_ids': [ticker]},
+            {'name': 'ticker', 'product_ids': [ticker]}
         ]
     }
 
@@ -43,12 +47,12 @@ def on_error(ws, error):
 
 def on_close(ws):
     logFile.close()
-    print('WebSocket connection closed')
+    print('WebSocket Connection Closed')
 
 def print_statistics():
     global changeCount
 
-    previous_speed = 0
+    previous_speed = 0 
 
     while True:
         time.sleep(measurementInterval)
@@ -56,11 +60,13 @@ def print_statistics():
             'measurementInterval': measurementInterval,
             'totalChanges': Decimal(changeCount),
             'speed': Decimal(changeCount) / Decimal(measurementInterval),
-            'velocity': Decimal(changeCount / measurementInterval) - Decimal(previous_speed) 
+            'velocity': Decimal(changeCount / measurementInterval) - Decimal(previous_speed), 
+            'symbol': ticker
         }
 
         print('---------------------------')
-        print('Measurement Interval:', statistics['measurementInterval'], 'seconds')
+        print('Symbol:', Fore.MAGENTA + statistics['symbol'] + Style.RESET_ALL)
+        print('Interval:', statistics['measurementInterval'], 'seconds')
         print('Total Changes:', Fore.MAGENTA + str(statistics['totalChanges']) + Style.RESET_ALL)
         print('Speed:', Fore.BLUE + f'{statistics["speed"]:.2f}', 'changes per second' + Style.RESET_ALL)
 
@@ -74,7 +80,7 @@ def print_statistics():
 
         logFile.write(json.dumps(statistics, cls=DecimalEncoder) + '\n')
 
-        previous_speed = changeCount / measurementInterval 
+        previous_speed = changeCount / measurementInterval
         changeCount = 0
 
 if __name__ == '__main__':
@@ -86,5 +92,5 @@ if __name__ == '__main__':
     socket.on_message = on_message
     socket.on_error = on_error
     socket.on_close = on_close
-
+    
     socket.run_forever()
