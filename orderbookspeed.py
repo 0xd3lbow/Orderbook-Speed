@@ -7,7 +7,7 @@ from decimal import Decimal, ROUND_DOWN
 
 changeCount = 0
 measurementInterval = 3
-ticker = 'BTC-USD' 
+ticker = 'BTC-USD'  
 
 logFile = open('order_book_stats.json', 'a')
 
@@ -52,7 +52,8 @@ def on_close(ws):
 def print_statistics():
     global changeCount
 
-    previous_speed = 0 
+    previous_speed = 0  
+    first_interval = True  
 
     while True:
         time.sleep(measurementInterval)
@@ -60,27 +61,31 @@ def print_statistics():
             'measurementInterval': measurementInterval,
             'totalChanges': Decimal(changeCount),
             'speed': Decimal(changeCount) / Decimal(measurementInterval),
-            'velocity': Decimal(changeCount / measurementInterval) - Decimal(previous_speed), 
+            'velocity': Decimal(changeCount / measurementInterval) - Decimal(previous_speed),  # Calculate velocity
             'symbol': ticker
         }
 
-        print('---------------------------')
-        print('Symbol:', Fore.MAGENTA + statistics['symbol'] + Style.RESET_ALL)
-        print('Interval:', statistics['measurementInterval'], 'seconds')
-        print('Total Changes:', Fore.MAGENTA + str(statistics['totalChanges']) + Style.RESET_ALL)
-        print('Speed:', Fore.BLUE + f'{statistics["speed"]:.2f}', 'changes per second' + Style.RESET_ALL)
+        if not first_interval:
+            print('---------------------------')
+            print('Symbol:', Fore.MAGENTA + statistics['symbol'] + Style.RESET_ALL)
+            print('Interval:', statistics['measurementInterval'], 'seconds')
+            print('Total Changes:', Fore.MAGENTA + str(statistics['totalChanges']) + Style.RESET_ALL)
+            print('Speed:', Fore.BLUE + f'{statistics["speed"]:.2f}', 'changes per second' + Style.RESET_ALL)
 
-        if statistics['velocity'] >= 0:
-            velocity_str = '+' + format(statistics['velocity'], '.2f')
-        else:
-            velocity_str = format(statistics['velocity'], '.2f')
+            if statistics['velocity'] >= 0:
+                velocity_str = '+' + format(statistics['velocity'], '.2f')
+            else:
+                velocity_str = format(statistics['velocity'], '.2f')
 
-        print('Velocity:', Fore.MAGENTA + velocity_str + ' (m/s²)' + Style.RESET_ALL)
-        print('---------------------------')
+            print('Velocity Δ:', Fore.MAGENTA + velocity_str + ' (c/s²)' + Style.RESET_ALL)
+            print('---------------------------')
 
-        logFile.write(json.dumps(statistics, cls=DecimalEncoder) + '\n')
+            logFile.write(json.dumps(statistics, cls=DecimalEncoder) + '\n')
 
-        previous_speed = changeCount / measurementInterval
+        if first_interval:
+            first_interval = False
+
+        previous_speed = changeCount / measurementInterval 
         changeCount = 0
 
 if __name__ == '__main__':
@@ -94,3 +99,4 @@ if __name__ == '__main__':
     socket.on_close = on_close
     
     socket.run_forever()
+    
