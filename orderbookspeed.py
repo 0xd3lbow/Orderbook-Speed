@@ -6,8 +6,10 @@ from colorama import Fore, Style
 from decimal import Decimal, ROUND_DOWN
 
 changeCount = 0
+pulledBids = 0
+pulledAsks = 0
 measurementInterval = 3
-ticker = 'BTC-USD'  
+ticker = 'BTC-USD'
 
 logFile = open('order_book_stats.json', 'a')
 
@@ -35,12 +37,20 @@ def on_open(ws):
     ws.send(json.dumps(subscriptionData))
 
 def on_message(ws, message):
-    global changeCount
+    global changeCount, pulledBids, pulledAsks
 
     message = json.loads(message)
 
     if message['type'] == 'snapshot' or message['type'] == 'l2update':
         changeCount += 1
+
+        if message['type'] == 'l2update':
+            for change in message['changes']:
+                side, price, size = change
+                if side == 'buy' and size == '0.00000000':
+                    pulledBids += 1
+                elif side == 'sell' and size == '0.00000000':
+                    pulledAsks += 1
 
 def on_error(ws, error):
     print('WebSocket error:', error)
@@ -50,10 +60,10 @@ def on_close(ws):
     print('WebSocket Connection Closed')
 
 def print_statistics():
-    global changeCount
+    global changeCount, pulledBids, pulledAsks
 
-    previous_speed = 0  
-    first_interval = True  
+    previous_speed = 0
+    first_interval = True
 
     while True:
         time.sleep(measurementInterval)
@@ -61,8 +71,10 @@ def print_statistics():
             'measurementInterval': measurementInterval,
             'totalChanges': Decimal(changeCount),
             'speed': Decimal(changeCount) / Decimal(measurementInterval),
-            'velocity': Decimal(changeCount / measurementInterval) - Decimal(previous_speed),  # Calculate velocity
-            'symbol': ticker
+            'velocity': Decimal(changeCount / measurementInterval) - Decimal(previous_speed), 
+            'symbol': ticker,
+            'pulledBids': pulledBids,
+            'pulledAsks': pulledAsks
         }
 
         if not first_interval:
@@ -78,6 +90,8 @@ def print_statistics():
                 velocity_str = format(statistics['velocity'], '.2f')
 
             print('Velocity Δ:', Fore.MAGENTA + velocity_str + ' (c/s²)' + Style.RESET_ALL)
+            print('Pulled Bids:', Fore.CYAN + str(statistics['pulledBids']) + Style.RESET_ALL)
+            print('Pulled Asks:', Fore.CYAN + str(statistics['pulledAsks']) + Style.RESET_ALL)
             print('---------------------------')
 
             logFile.write(json.dumps(statistics, cls=DecimalEncoder) + '\n')
@@ -85,8 +99,10 @@ def print_statistics():
         if first_interval:
             first_interval = False
 
-        previous_speed = changeCount / measurementInterval 
+        previous_speed = changeCount / measurementInterval
         changeCount = 0
+        pulledBids = 0
+        pulledAsks = 0
 
 if __name__ == '__main__':
     statistics_thread = threading.Thread(target=print_statistics)
@@ -97,6 +113,5 @@ if __name__ == '__main__':
     socket.on_message = on_message
     socket.on_error = on_error
     socket.on_close = on_close
-    
+
     socket.run_forever()
-    
