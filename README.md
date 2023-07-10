@@ -18,6 +18,46 @@ In the physical world, **velocity** is expressed in terms of distance traveled p
    
   * The squared unit `(s²)` indicates the rate of change is measured per unit of time squared.
 
-  
+# Pulled Bids & Asks for Altcoin Orderbooks
 
+Outputs for pulled bids and asks have been added.
+* To run this script on altcoins, you'll have to update the size property under the for-loop to calculate the pulled orders from the new ticker.
+* **Note:** If you refer to the Coinbase documentation on Websocket channels, a message containing a size property of "0" indicates a previously active order was removed from that price level. 
+
+<img width="749" alt="Pulled-BidAsk" src="https://github.com/0xd3lbow/Orderbook-Speed/assets/130616587/9919bc9f-6058-4b95-9420-b823afcb97b6">
+
+
+
+# Size Property Variance
+* In the case of "BTC-USD" the size property for a pulled order is `"0.00000000"` .
+  
+```python
+# BTC-USD
+if message['type'] == 'l2update':
+            for change in message['changes']:
+                side, price, size = change
+                if side == 'buy' and size == '0.00000000':
+                    pulledBids += 1
+                elif side == 'sell' and size == '0.00000000':
+                    pulledAsks += 1
+```
+* For other tokens the l2update can return a different integer such as `"0.00"` . Here's `"LDO-USD"` for example.
+
+```python
+# LDO-USD
+if side == 'buy' and size == '0.00':
+    pulledBids += 1
+elif side == 'sell' and size == '0.00':
+    pulledAsks += 1
+```
+
+* To find the correct format from the websocket, use a print statement under the `on_message` function.
+
+```python
+def on_message(ws, message):
+    global changeCount, pulledBids, pulledAsks
+
+    message = json.loads(message)
+    print('WebSocket Message:', message)
+```
 
