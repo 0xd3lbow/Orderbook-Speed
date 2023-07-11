@@ -1,8 +1,9 @@
 # Simple Model for High Frequency Orderbook Data
 
 This is a lightweight tool that measures the `speed` and `velocity` of the limit orderbook, by using a Websocket to fetch orderbook updates it can track the fluctuation of quotes and return the total changes per second.
-  * Plot the rate of change of the bid and ask
-  * Can be applied to any exchange's websocket connection
+  * Plot the rate of change for buy and sell orders.
+  * Added outputs for the Bid-Ask Spread + pulled/removed bids and asks.
+  * Can be applied to any exchange's websocket connection, simply adjust ws config for the given exchange.
 
 <img width="473" alt="orderbookspeed" src="https://github.com/0xd3lbow/Orderbook-Speed/assets/130616587/39511948-77d1-45a9-8661-a0b1aaa8394b">
 
@@ -20,7 +21,6 @@ In the physical world, **velocity** is expressed in terms of distance traveled p
 
 # Pulled Bids & Asks for Altcoin Orderbooks
 
-Outputs for pulled bids and asks have been added.
 * To run this script on altcoins, you'll have to update the size property under the for-loop to calculate the pulled orders from the new ticker.
 * **Note:** If you refer to the Coinbase documentation on Websocket channels, a message containing a size property of "0" indicates a previously active order was removed from that price level. 
 
