@@ -13,11 +13,17 @@ ticker = 'BTC-USD'
 
 logFile = open('order_book_stats.json', 'a')
 
+timestamps = []
+spread_values = []
+
 class DecimalEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, Decimal):
             return float(str(o.quantize(Decimal('.00'), rounding=ROUND_DOWN)))
         return super().default(o)
+
+def calculate_spread(bid_price, ask_price):
+    return ask_price - bid_price
 
 def on_open(ws):
     with open('logo.txt', 'r') as logo_file:
@@ -37,7 +43,7 @@ def on_open(ws):
     ws.send(json.dumps(subscriptionData))
 
 def on_message(ws, message):
-    global changeCount, pulledBids, pulledAsks
+    global changeCount, pulledBids, pulledAsks, timestamps, spread_values
 
     message = json.loads(message)
 
@@ -52,6 +58,16 @@ def on_message(ws, message):
                 elif side == 'sell' and size == '0.00000000':
                     pulledAsks += 1
 
+    if message['type'] == 'ticker':
+        if 'best_bid' in message and 'best_ask' in message:
+            bid_price = float(message['best_bid'])
+            ask_price = float(message['best_ask'])
+            spread = calculate_spread(bid_price, ask_price)
+            timestamps.append(message['time'])
+            spread_values.append(spread)
+        else:
+            print('Best Bid-Ask not found in the Websocket message.')
+
 def on_error(ws, error):
     print('WebSocket error:', error)
 
@@ -60,7 +76,7 @@ def on_close(ws):
     print('WebSocket Connection Closed')
 
 def print_statistics():
-    global changeCount, pulledBids, pulledAsks
+    global changeCount, pulledBids, pulledAsks, timestamps, spread_values
 
     previous_speed = 0
     first_interval = True
@@ -71,7 +87,7 @@ def print_statistics():
             'measurementInterval': measurementInterval,
             'totalChanges': Decimal(changeCount),
             'speed': Decimal(changeCount) / Decimal(measurementInterval),
-            'velocity': Decimal(changeCount / measurementInterval) - Decimal(previous_speed), 
+            'velocity': Decimal(changeCount / measurementInterval) - Decimal(previous_speed),
             'symbol': ticker,
             'pulledBids': pulledBids,
             'pulledAsks': pulledAsks
@@ -84,6 +100,11 @@ def print_statistics():
             print('Total Changes:', Fore.MAGENTA + str(statistics['totalChanges']) + Style.RESET_ALL)
             print('Speed:', Fore.BLUE + f'{statistics["speed"]:.2f}', 'changes per second' + Style.RESET_ALL)
 
+            if spread_values:
+                latest_spread = spread_values[-1]
+                colored_latest_spread = Fore.BLUE + f'{latest_spread:.2f}' + Style.RESET_ALL
+                print('Bid-Ask Spread:', colored_latest_spread)
+
             if statistics['velocity'] >= 0:
                 velocity_str = '+' + format(statistics['velocity'], '.2f')
             else:
@@ -92,6 +113,7 @@ def print_statistics():
             print('Velocity Δ:', Fore.MAGENTA + velocity_str + ' (c/s²)' + Style.RESET_ALL)
             print('Pulled Bids:', Fore.CYAN + str(statistics['pulledBids']) + Style.RESET_ALL)
             print('Pulled Asks:', Fore.CYAN + str(statistics['pulledAsks']) + Style.RESET_ALL)
+
             print('---------------------------')
 
             logFile.write(json.dumps(statistics, cls=DecimalEncoder) + '\n')
