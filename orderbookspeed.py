@@ -26,7 +26,7 @@ def calculate_spread(bid_price, ask_price):
     return ask_price - bid_price
 
 def on_open(ws):
-    with open('logo.txt', 'r') as logo_file:
+    with open('assets/logo.txt', 'r') as logo_file:
         logo = logo_file.read()
         print(logo)
     print('WebSocket Connection Opened. . . .')
