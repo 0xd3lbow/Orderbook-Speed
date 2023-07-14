@@ -1,12 +1,12 @@
 from matplotlib.animation import FuncAnimation
 import matplotlib.ticker as ticker
 import matplotlib.pyplot as plt
+import websocket_handlers
 import threading
 import websocket
 import datetime
 import json
 import utils
-import websocket_handlers
 
 timestamps = []
 spread_values = []
